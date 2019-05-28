@@ -47,12 +47,12 @@ class GoogleAuth2LoginHandler(BaseHandler, tornado.auth.GoogleOAuth2Mixin):
 
         try:
             response = yield self.get_auth_http_client().fetch(
-                'https://www.googleapis.com/plus/v1/people/me',
+                'https://www.googleapis.com/userinfo/v2/me',
                 headers={'Authorization': 'Bearer %s' % access_token})
         except Exception as e:
             raise tornado.web.HTTPError(403, 'Google auth failed: %s' % e)
 
-        email = json.loads(response.body.decode('utf-8'))['emails'][0]['value']
+        email = json.loads(response.body.decode('utf-8'))['email']
         if not re.match(self.application.options.auth, email):
             message = (
                 "Access denied to '{email}'. Please use another account or "
@@ -82,7 +82,7 @@ class GithubLoginHandler(BaseHandler, tornado.auth.OAuth2Mixin):
     _OAUTH_SETTINGS_KEY = 'oauth'
 
     @tornado.gen.coroutine
-    def get_authenticated_user(self, redirect_uri, code, callback):
+    def get_authenticated_user(self, redirect_uri, code):
         body = urlencode({
             "redirect_uri": redirect_uri,
             "code": code,
@@ -100,7 +100,8 @@ class GithubLoginHandler(BaseHandler, tornado.auth.OAuth2Mixin):
         if response.error:
             raise tornado.auth.AuthError(
                 'OAuth authenticator error: %s' % str(response))
-        self.write(json.loads(response.body.decode('utf-8')))
+
+        raise tornado.gen.Return(json.loads(response.body.decode('utf-8')))
 
     @tornado.gen.coroutine
     def get(self):
